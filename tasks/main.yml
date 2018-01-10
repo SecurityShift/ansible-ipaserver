@@ -13,13 +13,13 @@
 
 - name: Ensure software is installed (yum)
   yum: name={{ item }} state=present
-  with_items: "{{ ipaserver_packages }}"
+  with_items: '{{ ipaserver_packages }}'
   when: ansible_distribution == "CentOS" or
         (ansible_distribution == "Fedora" and ansible_distribution_version|int <= 21)
 
 - name: Ensure software is installed (dnf)
   dnf: name={{ item }} state=present
-  with_items: "{{ ipaserver_packages }}"
+  with_items: '{{ ipaserver_packages }}'
   when: ansible_distribution == "Fedora" and ansible_distribution_version|int > 21
 
 - name: Run the installer
@@ -30,7 +30,7 @@
     -a {{ ipaserver_admin_password }}
     -p {{ ipaserver_dir_admin_password }}
     --hostname={{ ansible_fqdn }}
-    --ip-address={{ ansible_default.ipv4.address }}
+    --ip-address={{ ansible_eth0.ipv4.address }}
     {{ '--idstart=%s' % ipaserver_idstart if ipaserver_idstart | default(False) else '' }}
     {{ '--idmax=%s' % ipaserver_idmax if ipaserver_idmax | default(False) else '' }}
     {{ '--forwarder=%s' % ipaserver_dns_forwarder
@@ -45,5 +45,32 @@
     {{ '' if ipaserver_ui_redirect | default(True) else '--no-ui-redirect' }}
     creates=/etc/ipa/default.conf
 
+- name: Create subdomain
+  ipa_dnszone:
+    zone_name: '{{ item }}'
+    ipa_host: '{{ ipa_host }}'
+    ipa_user: admin
+    ipa_pass: '{{ ipaserver_admin_password }}'
+    validate_certs: False
+  with_items:
+    - '{{ sub_domains }}'
+    - '20.210.10.in-addr.arpa'
+
 - include: firewalld.yml
-  when: ipaserver_manage_firewalld
+
+
+- name: Create users
+  ipa_user:
+    name: '{{ item.name }}'
+    state: present
+    givenname: '{{ item.givenname }}'
+    sn: Acme
+    mail: {{ item.mail }
+    telephonenumber: '{{ item.tel }}'
+    sshpubkeyfp: '{{ item.sshkeys }}'
+    ipa_host: '{{ ipa_host }'
+    ipa_user: admin
+    ipa_pass: '{{ ipaserver_admin_password }}'
+  with_items:
+    - '{{ ipa_users }}'
+
