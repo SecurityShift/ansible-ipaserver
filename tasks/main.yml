@@ -65,7 +65,7 @@
     state: present
     givenname: '{{ item.givenname }}'
     sn: Acme
-    mail: {{ item.mail }
+    mail: '{{ item.mail }'
     telephonenumber: '{{ item.tel }}'
     sshpubkeyfp: '{{ item.sshkeys }}'
     ipa_host: '{{ ipa_host }'
