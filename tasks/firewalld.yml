@@ -8,6 +8,7 @@
   firewalld: service={{ item }} permanent=true state=enabled
   with_items:
     - https
+    - ldap
     - ldaps
     - kerberos
     - kpasswd

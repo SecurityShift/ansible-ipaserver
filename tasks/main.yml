@@ -1,15 +1,15 @@
 ---
-- name: Hard set the hostname
-  hostname: name={{ ansible_fqdn }}
+#- name: Hard set the hostname
+#  hostname: name={{ ansible_fqdn }}
 
-- name: Add host entry
-  lineinfile:
-    dest=/etc/hosts
-    regexp=" {{ ansible_hostname }} "
-    line="{{ ansible_default_ipv4.address }} {{ ansible_fqdn }}"
-    owner=root
-    group=root
-    mode=0644
+#- name: Add host entry
+#  lineinfile:
+#    dest=/etc/hosts
+#    regexp=" {{ ansible_hostname }} "
+#    line="{{ ansible_default_ipv4.address }} {{ ansible_fqdn }}"
+#    owner=root
+#    group=root
+#    mode=0644
 
 - name: Ensure software is installed (yum)
   yum: name={{ item }} state=present
@@ -43,6 +43,7 @@
     {{ '' if ipaserver_configure_ssh | default(True) else '--no-ssh' }}
     {{ '' if ipaserver_configure_sshd | default(True) else '--no-sshd' }}
     {{ '' if ipaserver_ui_redirect | default(True) else '--no-ui-redirect' }}
+    --auto-reverse
     creates=/etc/ipa/default.conf
 
 - name: Create subdomain
@@ -51,7 +52,7 @@
     ipa_host: '{{ ipa_host }}'
     ipa_user: admin
     ipa_pass: '{{ ipaserver_admin_password }}'
-    validate_certs: False
+  when: sub_domains is defined
   with_items:
     - '{{ sub_domains }}'
     - '20.210.10.in-addr.arpa'
