@@ -1,77 +1,15 @@
 ---
-#- name: Hard set the hostname
-#  hostname: name={{ ansible_fqdn }}
 
-#- name: Add host entry
-#  lineinfile:
-#    dest=/etc/hosts
-#    regexp=" {{ ansible_hostname }} "
-#    line="{{ ansible_default_ipv4.address }} {{ ansible_fqdn }}"
-#    owner=root
-#    group=root
-#    mode=0644
+- name: Configure master IPA Server
+  import_tasks: server.yml
+  when: ansible_fqdn == ipaserver_master
 
-- name: Ensure software is installed (yum)
-  yum: name={{ item }} state=present
-  with_items: '{{ ipaserver_packages }}'
-  when: ansible_distribution == "CentOS" or
-        (ansible_distribution == "Fedora" and ansible_distribution_version|int <= 21)
+- name: Configure AD Trust
+  include_role:
+    name: ipaserver-trust-ad
+  when: ansible_fqdn == ipaserver_master
 
-- name: Ensure software is installed (dnf)
-  dnf: name={{ item }} state=present
-  with_items: '{{ ipaserver_packages }}'
-  when: ansible_distribution == "Fedora" and ansible_distribution_version|int > 21
-
-- name: Run the installer
-  action: command
-    {{ ipaserver_base_command }}
-    --realm {{ ipaserver_realm }}
-    --domain {{ ipaserver_domain }}
-    -a {{ ipaserver_admin_password }}
-    -p {{ ipaserver_dir_admin_password }}
-    --hostname={{ ansible_fqdn }}
-    --ip-address={{ ansible_eth0.ipv4.address }}
-    {{ '--idstart=%s' % ipaserver_idstart if ipaserver_idstart | default(False) else '' }}
-    {{ '--idmax=%s' % ipaserver_idmax if ipaserver_idmax | default(False) else '' }}
-    {{ '--forwarder=%s' % ipaserver_dns_forwarder
-       if ipaserver_dns_forwarder | default(False) else '--no-forwarders' }}
-    {{ '--mkhomedir' if ipaserver_mkhomedir | default(True) else '' }}
-    {{ '--setup-dns' if ipaserver_setup_dns | default(True) else '' }}
-    {{ '--ssh-trust-dns' if ipaserver_ssh_trust_dns | default(True) else '' }}
-    {{ '' if ipaserver_hbac_allow | default(True) else '--no_hbac_allow' }}
-    {{ '' if ipaserver_setup_ntp | default(True) else '--no-ntp' }}
-    {{ '' if ipaserver_configure_ssh | default(True) else '--no-ssh' }}
-    {{ '' if ipaserver_configure_sshd | default(True) else '--no-sshd' }}
-    {{ '' if ipaserver_ui_redirect | default(True) else '--no-ui-redirect' }}
-    --auto-reverse
-    creates=/etc/ipa/default.conf
-
-- name: Create subdomain
-  ipa_dnszone:
-    zone_name: '{{ item }}'
-    ipa_host: '{{ ipa_host }}'
-    ipa_user: admin
-    ipa_pass: '{{ ipaserver_admin_password }}'
-  when: sub_domains is defined
-  with_items:
-    - '{{ sub_domains }}'
-    - '20.210.10.in-addr.arpa'
-
-- include: firewalld.yml
-
-
-- name: Create users
-  ipa_user:
-    name: '{{ item.name }}'
-    state: present
-    givenname: '{{ item.givenname }}'
-    sn: Acme
-    mail: '{{ item.mail }'
-    telephonenumber: '{{ item.tel }}'
-    sshpubkeyfp: '{{ item.sshkeys }}'
-    ipa_host: '{{ ipa_host }'
-    ipa_user: admin
-    ipa_pass: '{{ ipaserver_admin_password }}'
-  with_items:
-    - '{{ ipa_users }}'
+  #- name: Configure replica IPA Servers
+  #import_tasks: replica.yml
+  #when: ansible_fqdn != ipaserver_master
 
