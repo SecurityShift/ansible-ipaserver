@@ -46,16 +46,16 @@
     --auto-reverse
     creates=/etc/ipa/default.conf
 
-- name: Create subdomain
-  ipa_dnszone:
-    zone_name: '{{ item }}'
-    ipa_host: '{{ ipa_host }}'
-    ipa_user: admin
-    ipa_pass: '{{ ipaserver_admin_password }}'
-  when: sub_domains is defined
-  with_items:
-    - '{{ sub_domains }}'
-    - '20.210.10.in-addr.arpa'
+    #- name: Create subdomain
+    #ipa_dnszone:
+    #zone_name: '{{ item }}'
+    #ipa_host: '{{ ipa_host }}'
+    #ipa_user: admin
+    #ipa_pass: '{{ ipaserver_admin_password }}'
+    #when: sub_domains is defined
+    #with_items:
+    #- '{{ sub_domains }}'
+    #- '20.210.10.in-addr.arpa'
 
 - include: firewalld.yml
 
