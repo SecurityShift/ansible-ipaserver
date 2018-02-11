@@ -1,0 +1,120 @@
+#---
+
+- name: Install required packages
+  yum:
+    name: '{{ item }}'
+    disable_gpg_check: yes
+  with_items:
+    - ipa-server-trust-ad
+    - https://ktdreyer.fedorapeople.org/clot/pexpect/python-ptyprocess-0.5-1.el7.noarch.rpm
+    - https://ktdreyer.fedorapeople.org/clot/pexpect/python2-pexpect-4.0.1-5.el7.rhcs1.noarch.rpm
+
+- name: Init Kerberos
+  expect:
+    command: kinit admin
+    responses:
+      assword: "{{ ipaserver_admin_password }}"
+  changed_when: false
+
+  #- name: Get list of DNS forwarders
+  #command: ipa dnsforwardzone-find
+  #register: dns_forwarders
+  #changed_when: false
+  #ignore_errors: true
+
+  #- name: Add DNS zone forwarder(s)
+  #command: ipa dnsforwardzone-add {{ item.name }} --forwarder={{ item.ip }} --forward-policy=first
+  #when: "'Zone name: {{ item.name }}' not in dns_forwarders.stdout"
+  #with_items: "{{ ipaserver_forwarder_domains }}"
+
+
+  #- name: Add IPA & AD Host glue record into IPA domain
+  #ipa_dnsrecord:
+  #  ipa_host: '{{ ipa_host }}'
+  #  ipa_pass: '{{ ipaserver_admin_password }}'
+  #  state: present
+  #  zone_name: '{{ ipaserver_domain }}'
+  #  record_name: '{{ item }}.'
+  #  record_type: 'A'
+  #  record_value: '{{ hostvars[item].ansible_host }}'
+  #with_items:
+  #  - '{{ groups.ad }}'
+  #  # - '{{ groups.ipa }}'
+
+  #- name: Get list of AD NS records
+  #command: ipa dnsrecord-find as7551.net ad --ns-rec={{ item }}.
+  #register: ad_ns_records
+  #changed_when: false
+  #ignore_errors: true
+  #with_items:
+  #  - '{{ groups.ad }}'
+
+  #- name: Add DNS zone forwarder(s)
+  #command: ipa dnsrecord-add {{ ipaserver_domain }} {{ ipaserver_trust_ad_domain.split(".")[0] }} --ns-rec={{ item.item }}.
+  #when: item.item not in item.stdout
+  #ignore_errors: true
+  #with_items:
+  #  - '{{ ad_ns_records.results }}'
+
+
+- name: Get AD trust config
+  command: ipa trustconfig-show
+  register: trust_config
+  changed_when: false
+  ignore_errors: true
+  when: ipaserver_trust_ad_domain is defined
+
+- name: Install AD trust config
+  command:
+    'ipa-adtrust-install --netbios-name {{ ipaserver_netbios_name }} --unattended --admin-password {{ ipaserver_admin_password }} --enable-compat'
+  when: ipaserver_trust_ad_domain is defined and ipaserver_netbios_name not in trust_config.stdout
+  register: install_trust_config
+
+- name: Clear Kerberos ticket
+  command: kdestroy
+  when: ipaserver_trust_ad_domain is defined and install_trust_config.changed
+  changed_when: false
+
+- name: Reinit Kerberos
+  expect:
+    command: kinit admin
+    responses:
+      assword: "{{ ipaserver_admin_password }}"
+  when: ipaserver_trust_ad_domain is defined and install_trust_config.changed
+  changed_when: false
+
+
+- name: Get AD trust domains
+  command: 'ipa trustdomain-find {{ ipaserver_trust_ad_domain }}'
+  register: trust_domain
+  changed_when: false
+  ignore_errors: true
+  when: ipaserver_trust_ad_domain is defined
+
+# change vars to an object, use vault for password
+- name: Add AD trust
+  expect:
+    command:
+      ipa trust-add --type=ad {{ ipaserver_trust_ad_domain }} --admin {{ ipaserver_trust_ad_admin }} --password
+    responses:
+      assword: "{{ ipaserver_trust_ad_password }}"
+  when: ipaserver_trust_ad_domain is defined and ipaserver_trust_ad_domain not in trust_domain.stdout
+
+- name: Create external group in IPA for trusted domain admins
+  ipa_group:
+    name: ad_admins_external
+    external: true
+    description: 'ad.as7551.net admins external map'
+    state: present
+    ipa_host: '{{ ipa_host }}'
+    ipa_pass: '{{ ipaserver_admin_password }}'
+  notify: Add trusted domain users to the external group
+
+- name: Create POSIX group for external ad_admins_external group
+  ipa_group:
+    name: ad_admins
+    description: 'ad.as7551.net admins'
+    state: present
+    ipa_host: '{{ ipa_host }}'
+    ipa_pass: '{{ ipaserver_admin_password }}'
+

@@ -1,40 +1,8 @@
 ---
-- name: Set replica_name
-  set_fact:
-    replica_name: "{{ ansible_fqdn }}"
-
-- name: Prepare the replication file
-  shell: ipa-replica-prepare -p {{ ipaserver_admin_password }} {{ replica_name }}
-  args:
-    creates: "/var/lib/ipa/replica-info-{{ replica_name }}.gpg"
-  delegate_to: "{{ ipaserver_master }}"
-  #no_log: True
-
-# synchronize do not work, as it requires a direct ssh connexion between
-# the 2 server, with proper ssh setup and rsync
-# use base64, since transmitting binary over jinja might cause trouble
-- name: Convert the gpg file to base64
-  shell: base64 /var/lib/ipa/replica-info-{{ replica_name }}.gpg
-  register: replica_info
-  delegate_to: "{{ ipaserver_master }}"
-  changed_when: False
-
-- name: Set replica_file
-  set_fact:
-    replica_file: "/root/replica-info-{{ replica_name }}.gpg"
-
-- name: Copy the base64 file
-  copy:
-    dest: "{{ replica_file + '.base64' }}"
-    content: "{{ replica_info.stdout }}"
-
-- name: Decode the base64 file
-  shell: base64 -d {{ replica_file }}.base64 > {{ replica_file }}
-  args:
-    creates: "{{ replica_file }}"
 
 - name: Install the replica
-  shell: ipa-replica-install -U -p {{ ipaserver_admin_password }}  -w {{ ipaserver_dir_admin_password }} {{ replica_file }}
+  shell: ipa-replica-install
   args:
     creates: /etc/ipa/default.conf
     #no_log: True
+

@@ -1,15 +1,15 @@
 ---
 
-- name: Configure master IPA Server
+- name: Install software
+  import_tasks: install.yml
+
+- name: Setup Firewall
+  import_tasks: firewalld.yml
+
+- name: Configure IPA Servers
   import_tasks: server.yml
-  when: ansible_fqdn == ipaserver_master
 
-- name: Configure AD Trust
-  include_role:
-    name: ipaserver-trust-ad
-  when: ansible_fqdn == ipaserver_master
+- name: Setup Users
+  import_tasks: users.yml
 
-  #- name: Configure replica IPA Servers
-  #import_tasks: replica.yml
-  #when: ansible_fqdn != ipaserver_master
 

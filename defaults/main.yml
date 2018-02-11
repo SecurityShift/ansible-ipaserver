@@ -1,4 +1,5 @@
-ipaserver_base_command: ipa-server-install -U 
+ipaserver_base_command: ipa-server-install -U
+ipaserver_replica_command: ipa-replica-install -U
 ipaserver_configure_ssh: True
 ipaserver_configure_sshd: True
 ipaserver_dns_forwarder: 8.8.8.8
@@ -16,4 +17,6 @@ ipaserver_setup_dns: True
 ipaserver_setup_ntp: True
 ipaserver_ssh_trust_dns: True
 ipaserver_ui_redirect: True
+ipaserver_setup_kra: False
+ipaserver_auto_reverse: True
 ipa_users: []
