@@ -4,12 +4,12 @@
 
 - name: Add host entry
   lineinfile:
-    dest=/etc/hosts
-    regexp=" {{ ansible_hostname }} "
-    line="{{ ansible_default_ipv4.address }} {{ ansible_fqdn }}"
-    owner=root
-    group=root
-    mode=0644
+    dest: /etc/hosts
+    regexp: '^{{ ansible_default_ipv4.address | replace(".", "\.") }}.*$'
+    line: "{{ ansible_default_ipv4.address }} {{ ansible_fqdn }}"
+    owner: root
+    group: root
+    mode: 0644
 
 - name: Run the installer
   action: command
@@ -42,7 +42,7 @@
     {{ '' if ipaserver_ui_redirect | default(True) else '--no-ui-redirect' }}
     creates='/var/lib/ipa/ra-agent.key'
 
-- name: Create subdomain
+- name: Create dns zones
   ipa_dnszone:
     state: present
     zone_name: '{{ item }}'
@@ -55,3 +55,16 @@
   run_once: true
   with_items:
     - '{{ ipa_zones }}'
+
+- name: Add dns entry for ipa server
+  ipa_dnsrecord:
+    zone_name: '{{ location }}.{{ base_domain }}'
+    record_name: '{{ ansible_hostname }}'
+    record_type: A
+    record_value: '{{ ansible_host }}'
+    ipa_host: '{{ ipaserver_master }}'
+    ipa_user: admin
+    ipa_pass: '{{ ipaserver_admin_password }}'
+    validate_certs: False
+
+

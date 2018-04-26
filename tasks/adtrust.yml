@@ -104,7 +104,7 @@
   ipa_group:
     name: ad_admins_external
     external: true
-    description: 'ad.as7551.net admins external map'
+    description: '{{ ad_dns_domain_name }} admins external map'
     state: present
     ipa_host: '{{ ipa_host }}'
     ipa_pass: '{{ ipaserver_admin_password }}'
@@ -113,7 +113,7 @@
 - name: Create POSIX group for external ad_admins_external group
   ipa_group:
     name: ad_admins
-    description: 'ad.as7551.net admins'
+    description: '{{ ad_dns_domain_name }} admins'
     state: present
     ipa_host: '{{ ipa_host }}'
     ipa_pass: '{{ ipaserver_admin_password }}'
