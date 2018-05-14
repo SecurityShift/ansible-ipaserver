@@ -36,11 +36,20 @@
     {{ '--netbios-name=%s' % ipaserver_netbios_name if ipaserver_netbios_name | default(False) else '' }}
     {{ '--allow-zone-overlap' if ipaserver_allow_zone_overlap | default(False) else '' }}
     {{ '' if ipaserver_hbac_allow | default(True) else '--no_hbac_allow' }}
-    {{ '' if ipaserver_setup_ntp | default(True) else '--no-ntp' }}
+    {{ '' if ipaserver_setup_ntp | default(False) else '--no-ntp' }}
     {{ '' if ipaserver_configure_ssh | default(True) else '--no-ssh' }}
     {{ '' if ipaserver_configure_sshd | default(True) else '--no-sshd' }}
     {{ '' if ipaserver_ui_redirect | default(True) else '--no-ui-redirect' }}
     creates='/var/lib/ipa/ra-agent.key'
+
+- name: Start and enable services
+  service:
+    name: '{{ item }}'
+    state: started
+    enabled: true
+  with_items:
+    - ipa
+    - named-pkcs11
 
 - name: Create dns zones
   ipa_dnszone:
@@ -55,6 +64,8 @@
   run_once: true
   with_items:
     - '{{ ipa_zones }}'
+  tags:
+    - dns
 
 - name: Add dns entry for ipa server
   ipa_dnsrecord:
