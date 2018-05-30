@@ -1,27 +1,31 @@
 ---
-- name: Enable the LDAPS firewalld ruleset provided by freeipa
-  firewalld: service=freeipa-ldaps permanent=true state=enabled
-  notify: reload firewalld
-  when: ansible_distribution == "Fedora"
-
-- name: Enable the individual rulesets for CentOS
+- name: Make sure freeipa services can pass through firewall
   firewalld:
-    service: '{{ item.service | default(omit) }}'
-    port: '{{ item.port | default(omit) }}'
+    rich_rule: "rule family=ipv4 source address={{ item[0] }} service name={{ item[1] }} accept"
+    zone: public
     permanent: true
     state: enabled
-  with_items:
-    - service: http
-    - service: https
-    - service: ldap
-    - service: ldaps
-    - service: kerberos
-    - service: kpasswd
-    - service: dns
-    - service: ntp
-    - port: 8443/tcp
+  with_nested:
+    - '{{ freeipa_firewall_permit }}'
+    - [ http, https, ldap, ldaps, kerberos, kpasswd, dns, ntp ]
+  when: firewalld_enabled
   notify: reload firewalld
-  when: ansible_distribution != "Fedora" and ansible_os_family == "RedHat"
+  tags:
+    - firewall
+
+- name: Make sure freeipa ports can pass through firewall
+  firewalld:
+    rich_rule: "rule family=ipv4 source address={{ item[0] }} port port={{ item[1].port }} protocol={{ item[1].protocol }} accept"
+    zone: public
+    permanent: true
+    state: enabled
+  with_nested:
+    - '{{ freeipa_firewall_permit }}'
+    - [ { port: 8443, protocol: tcp } ]
+  when: firewalld_enabled
+  notify: reload firewalld
+  tags:
+    - firewall
 
 - name: Reload firewall
   meta: flush_handlers
