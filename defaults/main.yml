@@ -1,3 +1,4 @@
+ipaserver_role_git_repo: https://github.com/SecurityShift/ansible-role-freeipa-server
 ipaserver_base_command: ipa-server-install -U
 ipaserver_replica_command: ipa-replica-install -U
 ipaserver_configure_ssh: True
