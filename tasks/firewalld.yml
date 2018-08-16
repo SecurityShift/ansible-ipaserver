@@ -4,6 +4,7 @@
     rich_rule: "rule family=ipv4 source address={{ item[0] }} service name={{ item[1] }} accept"
     zone: public
     permanent: true
+    immediate: true
     state: enabled
   with_nested:
     - '{{ freeipa_firewall_permit }}'
@@ -18,6 +19,7 @@
     rich_rule: "rule family=ipv4 source address={{ item[0] }} port port={{ item[1].port }} protocol={{ item[1].protocol }} accept"
     zone: public
     permanent: true
+    immediate: true
     state: enabled
   with_nested:
     - '{{ freeipa_firewall_permit }}'
